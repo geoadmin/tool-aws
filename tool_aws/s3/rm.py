@@ -168,9 +168,6 @@ def main():
     if startJob(keys, force):
         while len(keys) > 0:
             if pm:
-                # Wait for all processes to shut down
-                while pm.nbOfProcessesAlive > 0:
-                    time.sleep(.5)
                 keys = S3Keys(S3Bucket, prefix)
                 keys.chunk(chunkSize)
             pm = PoolManager(numProcs=nbThreads)
