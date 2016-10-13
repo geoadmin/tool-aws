@@ -2,6 +2,8 @@
 tool-aws
 ========
 
+[![Build Status](https://travis-ci.org/geoadmin/tool-aws.svg?branch=master)](https://travis-ci.org/geoadmin/tool-aws)
+
 ### Macro CMDs for managing AWS resources
 
 ### Style

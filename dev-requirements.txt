@@ -1,4 +1,5 @@
 autopep8
+coveralls
 flake8
 mock==1.0.1
 nose

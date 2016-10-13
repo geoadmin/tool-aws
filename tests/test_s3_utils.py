@@ -17,7 +17,7 @@ NB_KEYS = 101
 class TestS3Utils(unittest.TestCase):
 
     def setUp(self):
-        def getOrderedKeys(a, b):
+        def getOrderedKeys(a, b, c):
             return [{'Key': str(i)} for i in range(NB_KEYS)]
         self.getKeysFromS3 = getOrderedKeys
         self.getKeysFromS3_patch = mock.patch(
