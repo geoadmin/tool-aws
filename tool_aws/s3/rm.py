@@ -108,19 +108,19 @@ def parseArguments(parser, argv):
 
 def callback(counter, response):
     if response:
-        logger.info('number of requests: %s' % counter)
+        logger.info('number of requests per batch: %s' % counter)
         logger.info('result: %s' % response)
 
 
 def startJob(keys, force):
-    logger.info('Warning: the script will now delete:')
-    logger.info(keys)
-
     if len(keys) == 0:
         logger.info('Actually, there\'s nothing to do... aborting')
         logger.info('Hint: if your prefix starts with \'/\'')
         logger.info('simply remove the first character.')
         return False
+
+    logger.info('Warning: the script will now delete:')
+    logger.info(keys)
 
     if force:
         return True
@@ -170,12 +170,16 @@ def main():
             if pm:
                 keys = S3Keys(S3Bucket, prefix)
                 keys.chunk(chunkSize)
-            pm = PoolManager(numProcs=nbThreads)
-            pm.imap_unordered(
-                deleteKeys,
-                keys,
-                keys.chunkSize,
-                callback=callback)
+                if len(keys):
+                    logger.info('New batch delete')
+                    logger.info(str(keys))
+            if len(keys):
+                pm = PoolManager(numProcs=nbThreads)
+                pm.imap_unordered(
+                    deleteKeys,
+                    keys,
+                    keys.chunkSize,
+                    callback=callback)
     logger.info('Deletion finished...')
 
 
