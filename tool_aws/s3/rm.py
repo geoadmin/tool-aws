@@ -2,6 +2,7 @@
 
 import os
 import sys
+import time
 import boto3
 import logging
 import multiprocessing
@@ -136,7 +137,7 @@ def startJob(keys, force):
             break
 
     if userInput == u'n':
-        logger.info('You have refused to proceed, the script will now abort...')
+        logger.info('You have refused to proceed, the script will now abort.')
         return False
     return True
 
@@ -151,21 +152,34 @@ def deleteKeys(keys):
 
 def main():
     global S3Bucket
+    pm = None
     parser = createParser()
     profileName, bucketName, prefix, chunkSize, nbThreads, force = \
         parseArguments(parser, sys.argv)
 
+    # Maximum number of keys to be listed at a time
     session = boto3.session.Session(profile_name=profileName)
     s3 = session.resource('s3')
     S3Bucket = s3.Bucket(bucketName)
     keys = S3Keys(S3Bucket, prefix)
     chunkSize = chunkSize or getMaxChunkSize(nbThreads, len(keys))
     keys.chunk(chunkSize)
+    logger.info('Deletion started...')
     if startJob(keys, force):
-        logger.info('Deletion started...')
-        pm = PoolManager(numProcs=nbThreads)
-        pm.imap_unordered(deleteKeys, keys, keys.chunkSize, callback=callback)
-        logger.info('Deletion finished...')
+        while len(keys) > 0:
+            if pm:
+                # Wait for all processes to shut down
+                while pm.nbOfProcessesAlive > 0:
+                    time.sleep(.5)
+                keys = S3Keys(S3Bucket, prefix)
+                keys.chunk(chunkSize)
+            pm = PoolManager(numProcs=nbThreads)
+            pm.imap_unordered(
+                deleteKeys,
+                keys,
+                keys.chunkSize,
+                callback=callback)
+    logger.info('Deletion finished...')
 
 
 if __name__ == '__main__':

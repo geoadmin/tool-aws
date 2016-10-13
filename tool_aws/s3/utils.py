@@ -27,8 +27,9 @@ Function that returns keys given a bucket object and prefix.
 """
 
 
-def getKeysFromS3(s3Bucket, prefix):
-    return [{'Key': i.key} for i in s3Bucket.objects.filter(Prefix=prefix)]
+def getKeysFromS3(s3Bucket, prefix, maxKeys):
+    return [{'Key': i.key}
+            for i in s3Bucket.objects.filter(Prefix=prefix).limit(maxKeys)]
 
 
 class S3Keys:
@@ -36,16 +37,16 @@ class S3Keys:
     This class is used to generate chunks of keys, based on prefix key.
     """
 
-    def __init__(self, s3Bucket, prefix, chunkSize=1):
+    def __init__(self, s3Bucket, prefix, chunkSize=1, maxKeys=32000):
         self._prefix = prefix
         self._chunkSize = chunkSize
-        self._keys = getKeysFromS3(s3Bucket, prefix)
+        self._keys = getKeysFromS3(s3Bucket, prefix, maxKeys)
         self._nbKeys = len(self._keys)
         self._chunkedKeys = chunks(self._keys, self._chunkSize)
         self._bucketName = s3Bucket.name
 
     def __str__(self):
-        return dedent("""\
+        return dedent("""\\n
             Number of keys: %d
             Chunk size    : %d
             Prefix        : %s
