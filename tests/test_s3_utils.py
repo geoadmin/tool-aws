@@ -84,6 +84,16 @@ class TestS3Utils(unittest.TestCase):
         self.assertEqual(dummyKeys.prefix, prefix)
         self.assertEqual(dummyKeys.chunkSize, chunkSize)
 
+        chunkSize = 1
+        dummyKeys.chunk(chunkSize)
+        self.assertIsInstance(dummyKeys, collections.Iterable)
+        self.assertEqual(len(dummyKeys), NB_KEYS)
+        self.assertEqual(dummyKeys.prefix, prefix)
+        self.assertEqual(dummyKeys.chunkSize, chunkSize)
+
+        keys = [k for k in dummyKeys]
+        self.assertEqual(len(keys), NB_KEYS)
+
     def test_get_max_chunk_size(self):
         nbProc = 8
         nbKeys = 799
@@ -97,3 +107,11 @@ class TestS3Utils(unittest.TestCase):
         nbKeys = 10000
         chunkSize = getMaxChunkSize(nbProc, nbKeys)
         self.assertEqual(chunkSize, 1000)
+
+        nbKeys = 1
+        chunkSize = getMaxChunkSize(nbProc, nbKeys)
+        self.assertEqual(chunkSize, 1)
+
+        nbKeys = 0
+        chunkSize = getMaxChunkSize(nbProc, nbKeys)
+        self.assertEqual(chunkSize, 0)

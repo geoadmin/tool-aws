@@ -19,7 +19,8 @@ Function that returns how many keys should be deleted at a time per process.
 
 def getMaxChunkSize(nbProc, nbKeys, maxChunkSize=1000):
     chunkSize = float(nbKeys) / float(nbProc)
-    return int(min(math.floor(chunkSize), maxChunkSize))
+    chunkSize = 1 if chunkSize < 1 and chunkSize > 0 else math.floor(chunkSize)
+    return int(min(chunkSize, maxChunkSize))
 
 
 """
