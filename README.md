@@ -8,5 +8,10 @@ tool-aws
 
 ### Style
 
+Control styling:
+
 `$ flake8 tool_aws/ tests/`
+
+Autofix mistakes:
+
 `$ find tool_aws/* tests/* -type f -name '*.py' -print | xargs autopep8 --in-place --aggressive --aggressive --verbose`
