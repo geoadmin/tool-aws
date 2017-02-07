@@ -45,6 +45,7 @@ class S3Keys:
         self._nbKeys = len(self._keys)
         self._chunkedKeys = chunks(self._keys, self._chunkSize)
         self._bucketName = s3Bucket.name
+        self._maxKeys = maxKeys
 
     def __str__(self):
         return dedent("""\\n
@@ -77,3 +78,7 @@ class S3Keys:
     @property
     def chunkSize(self):
         return self._chunkSize
+
+    @property
+    def maxKeys(self):
+        return self._maxKeys
