@@ -118,7 +118,13 @@ def startJob(keys, force):
         logger.info('simply remove the first character.')
         return False
 
-    logger.info('Warning: the script will now delete:')
+    # There is no way to count all keys without listing them all first.
+    # We want to avoid listing them all several times,
+    # so we only provide the size of the first batch.
+    if keys.chunkSize == keys.maxKeys:
+        logger.info('There are more than %s keys in total.\n' +
+                    'These represents the first batch.' % keys.chunkSize)
+    logger.info('Warning: the script will now start deleting:')
     logger.info(keys)
 
     if force:
@@ -163,8 +169,8 @@ def main():
     keys = S3Keys(S3Bucket, prefix)
     chunkSize = chunkSize or getMaxChunkSize(nbThreads, len(keys))
     keys.chunk(chunkSize)
-    logger.info('Deletion started...')
     if startJob(keys, force):
+        logger.info('Deletion started...')
         while len(keys) > 0:
             if pm:
                 keys = S3Keys(S3Bucket, prefix)
