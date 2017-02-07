@@ -7,6 +7,7 @@ from tool_aws.s3.utils import S3Keys, getMaxChunkSize
 class DummyS3Bucket(dict):
     pass
 
+
 dummyS3Bucket = DummyS3Bucket()
 dummyS3Bucket.name = 'myDummyBucketName'
 
