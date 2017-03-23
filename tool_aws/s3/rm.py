@@ -148,6 +148,11 @@ def startJob(keys, force):
 
 
 def deleteKeys(keys):
+    # When using SSL and multithreading one need to create one connection per process
+    # See also: http://stackoverflow.com/questions/3724900/python-ssl-problem-with-multiprocessing
+    session = boto3.session.Session(profile_name=profileName)
+    s3 = session.resource('s3')
+    S3Bucket = s3.Bucket(bucketName)
     try:
         response = S3Bucket.delete_objects(Delete=keys)
     except Exception as e:
@@ -156,7 +161,7 @@ def deleteKeys(keys):
 
 
 def main():
-    global S3Bucket
+    global bucketName, profileName
     pm = None
     parser = createParser()
     profileName, bucketName, prefix, chunkSize, nbThreads, force = \
@@ -171,7 +176,9 @@ def main():
     keys.chunk(chunkSize)
     if startJob(keys, force):
         logger.info('Deletion started...')
-        while len(keys) > 0:
+        # Make sure we delete the first batch
+        previousNumberOfKeys = keys.maxKeys
+        while len(keys) > 0 and previousNumberOfKeys == keys.maxKeys:
             if pm:
                 keys = S3Keys(S3Bucket, prefix)
                 keys.chunk(chunkSize)
@@ -185,6 +192,7 @@ def main():
                     keys,
                     keys.chunkSize,
                     callback=callback)
+            previousNumberOfKeys = len(keys)
     logger.info('Deletion finished...')
 
 
