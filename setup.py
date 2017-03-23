@@ -6,7 +6,7 @@ from setuptools import setup, find_packages
 
 
 install_requires = [
-  'boto3 == 1.4.1',
+  'boto3 == 1.4.4',
   'poolmanager == 0.0.5',
   'configparser == 3.5.0',
 ]
