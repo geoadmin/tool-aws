@@ -148,8 +148,9 @@ def startJob(keys, force):
 
 
 def deleteKeys(keys):
-    # When using SSL and multithreading one need to create one connection per process
-    # See also: http://stackoverflow.com/questions/3724900/python-ssl-problem-with-multiprocessing
+    # When using SSL and multithreading one need to create one connection
+    # per process. See also: http://stackoverflow.com/questions/
+    # 3724900/python-ssl-problem-with-multiprocessing
     session = boto3.session.Session(profile_name=profileName)
     s3 = session.resource('s3')
     S3Bucket = s3.Bucket(bucketName)
