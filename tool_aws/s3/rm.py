@@ -175,11 +175,13 @@ def main():
     keys = S3Keys(S3Bucket, prefix)
     chunkSize = chunkSize or getMaxChunkSize(nbThreads, len(keys))
     keys.chunk(chunkSize)
+    total = 0
     if startJob(keys, force):
         logger.info('Deletion started...')
         # Make sure we delete the first batch
         previousNumberOfKeys = keys.maxKeys
         while len(keys) > 0 and previousNumberOfKeys == keys.maxKeys:
+            total = total + len(keys)
             if pm:
                 keys = S3Keys(S3Bucket, prefix)
                 keys.chunk(chunkSize)
@@ -194,7 +196,9 @@ def main():
                     keys.chunkSize,
                     callback=callback)
             previousNumberOfKeys = len(keys)
-    logger.info('Deletion finished...')
+            logger.info('Number of key deleted so far: ' + str(total))
+    logger.info('Deleted ' + str(total) + ' keys from S3. Deletion finished...')
+    print '\nDeleted ' + str(total) + ' keys from S3.'
 
 
 if __name__ == '__main__':
