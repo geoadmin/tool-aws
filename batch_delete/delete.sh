@@ -1,6 +1,10 @@
 #!/bin/bash
+set -e
+set -u
+set -o pipefail
 
-for line in `cat $1`
+
+for line in $(cat $1)
 do
   prefix='1.0.0/'$line'/*'
   size=${#prefix}
