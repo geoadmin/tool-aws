@@ -1,5 +1,6 @@
 #!/usr/bin/env python
 
+import time
 import os
 import sys
 import boto3
@@ -8,6 +9,7 @@ import multiprocessing
 import argparse as ap
 from textwrap import dedent
 from poolmanager import PoolManager
+from botocore.exceptions import ClientError
 from tool_aws.s3.utils import S3Keys, getMaxChunkSize
 
 logging.basicConfig(level=logging.INFO)
@@ -156,6 +158,13 @@ def deleteKeys(keys):
     S3Bucket = s3.Bucket(bucketName)
     try:
         response = S3Bucket.delete_objects(Delete=keys)
+    except ClientError as e:
+        if e.response['Error']['Code'] == 'SlowDown':
+            logger.info('We are going to fast for S3 it seems.')
+            logger.info('Pausing for 5 sec...')
+            time.sleep(5)
+            return deleteKeys(keys)
+        raise Exception(str(e))
     except Exception as e:
         raise Exception(str(e))
     return response
