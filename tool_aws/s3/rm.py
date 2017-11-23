@@ -23,6 +23,22 @@ def usage():
     logger.info('try -h or --help for extended help')
 
 
+def prefixType(val):
+    if val.endswith('/*'):
+        val = val[:len(val) - 1]
+    return val
+
+
+def threadType(val):
+    if val is not None:
+        try:
+            return int(val)
+        except ValueError:
+            logger.error('The number of threads must be an integer.')
+            sys.exit(1)
+    return multiprocessing.cpu_count()
+
+
 def createParser():
     parser = ap.ArgumentParser(
         description=dedent("""\
@@ -48,22 +64,23 @@ def createParser():
         '--profile',
         dest='profileName',
         action='store',
+        default='default',
         type=str,
         help='AWS profile',
         required=True)
     mandatory.add_argument(
-        '--bucket-name',
+        '-b', '--bucket-name',
         dest='bucketName',
         action='store',
         type=str,
         help='bucket name',
         required=True)
     mandatory.add_argument(
-        '--prefix',
+        '-p', '--prefix',
         dest='prefix',
         action='store',
-        type=str,
-        help='Prefix (string) relative to the bucket base path. ',
+        type=prefixType,
+        help='Prefix (string) relative to the bucket base path.',
         required=True)
 
     optionGroup = parser.add_argument_group('Program options')
@@ -71,7 +88,7 @@ def createParser():
         '-n', '--threads-number',
         dest='nbThreads',
         action='store',
-        type=int,
+        type=threadType,
         default=None,
         help='Number of threads (subprocess), default: machine number of CPUs')
     optionGroup.add_argument(
@@ -93,18 +110,7 @@ def createParser():
 
 
 def parseArguments(parser, argv):
-    options = parser.parse_args(argv[1:])
-
-    profileName = options.profileName
-    bucketName = options.bucketName
-    prefix = options.prefix
-    # Support * operator
-    if prefix.endswith('/*'):
-        prefix = prefix[:len(prefix) - 1]
-    nbThreads = options.nbThreads or multiprocessing.cpu_count()
-    chunkSize = options.chunkSize
-    force = options.force
-    return profileName, bucketName, prefix, chunkSize, nbThreads, force
+    return parser.parse_args(argv[1:])
 
 
 def callback(counter, response):
@@ -174,29 +180,28 @@ def main():
     global bucketName, profileName
     pm = None
     parser = createParser()
-    profileName, bucketName, prefix, chunkSize, nbThreads, force = \
-        parseArguments(parser, sys.argv)
+    opts = parseArguments(parser, sys.argv)
 
     # Maximum number of keys to be listed at a time
-    session = boto3.session.Session(profile_name=profileName)
+    session = boto3.session.Session(profile_name=opts.profileName)
     s3 = session.resource('s3')
-    S3Bucket = s3.Bucket(bucketName)
-    keys = S3Keys(S3Bucket, prefix)
-    chunkSize = chunkSize or getMaxChunkSize(nbThreads, len(keys))
+    S3Bucket = s3.Bucket(opts.bucketName)
+    keys = S3Keys(S3Bucket, opts.prefix)
+    chunkSize = opts.chunkSize or getMaxChunkSize(opts.nbThreads, len(keys))
     keys.chunk(chunkSize)
-    if startJob(keys, force):
+    if startJob(keys, opts.force):
         logger.info('Deletion started...')
         # Make sure we delete the first batch
         previousNumberOfKeys = keys.maxKeys
         while len(keys) > 0 and previousNumberOfKeys == keys.maxKeys:
             if pm:
-                keys = S3Keys(S3Bucket, prefix)
+                keys = S3Keys(S3Bucket, opts.prefix)
                 keys.chunk(chunkSize)
                 if len(keys):
                     logger.info('New batch delete')
                     logger.info(str(keys))
             if len(keys):
-                pm = PoolManager(numProcs=nbThreads)
+                pm = PoolManager(numProcs=opts.nbThreads)
                 pm.imap_unordered(
                     deleteKeys,
                     keys,
