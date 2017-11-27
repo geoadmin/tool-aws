@@ -26,6 +26,9 @@ def usage():
 def prefixType(val):
     if val.endswith('/*'):
         val = val[:len(val) - 1]
+    if not val.startswith('/'):
+        logger.error('Your prefix or path should start with a /')
+        sys.exit(1)
     return val
 
 
@@ -37,6 +40,25 @@ def threadType(val):
             logger.error('The number of threads must be an integer.')
             sys.exit(1)
     return multiprocessing.cpu_count()
+
+
+def bboxType(val):
+    if val is not None:
+        try:
+            bx = [float(c) for c in val.split(',')]
+        except Exception as e:
+            logging.error('Bad bbox definition')
+            logging.error('%s' % e)
+            sys.exit(1)
+        if len(bx) != 4:
+            logging.error(
+                'bbox should be a comma separated list of 2 coordinates')
+            sys.exit(1)
+        min_v = 1000000
+        if bx[0] < min_v or bx[2] < min_v or bx[1] < min_v or bx[3] < min_v:
+            logging.error('Bbox must be provided in lv95')
+            sys.exit(1)
+        return bx
 
 
 def createParser():
@@ -85,6 +107,13 @@ def createParser():
 
     optionGroup = parser.add_argument_group('Program options')
     optionGroup.add_argument(
+        '--bbox',
+        dest='bbox',
+        action='store',
+        type=bboxType,
+        default=None,
+        help='a bounding box in lv95')
+    optionGroup.add_argument(
         '-n', '--threads-number',
         dest='nbThreads',
         action='store',
@@ -110,7 +139,28 @@ def createParser():
 
 
 def parseArguments(parser, argv):
-    return parser.parse_args(argv[1:])
+    srids = []
+    supportedSrids = [21781, 2056, 4326, 3587]
+    opts = parser.parse_args(argv[1:])
+    if opts.bbox:
+        pathSplit = opts.prefix.split('/')
+        if len(pathSplit) > 5:
+            logger.error(
+                'Path should stop at the srid level definition')
+            sys.exit(1)
+        elif len(pathSplit) < 4:
+            logger.error(
+                'Incorrect path definition, missing timestamp and/or layerid')
+            sys.exit(1)
+        elif len(pathSplit) == 5:
+            srid = int(pathSplit[5])
+            if srid not in supportedSrids:
+                logger.error('SRID %s is not supported' % srid)
+                sys.exit(1)
+            srids = [srid]
+        else:
+            srids = supportedSrids
+    return opts, srids
 
 
 def callback(counter, response):
@@ -180,35 +230,56 @@ def main():
     global bucketName, profileName
     pm = None
     parser = createParser()
-    opts = parseArguments(parser, sys.argv)
+    opts, srids = parseArguments(parser, sys.argv)
 
     # Maximum number of keys to be listed at a time
     session = boto3.session.Session(profile_name=opts.profileName)
     s3 = session.resource('s3')
     S3Bucket = s3.Bucket(opts.bucketName)
-    keys = S3Keys(S3Bucket, opts.prefix)
-    chunkSize = opts.chunkSize or getMaxChunkSize(opts.nbThreads, len(keys))
-    keys.chunk(chunkSize)
-    if startJob(keys, opts.force):
-        logger.info('Deletion started...')
-        # Make sure we delete the first batch
-        previousNumberOfKeys = keys.maxKeys
-        while len(keys) > 0 and previousNumberOfKeys == keys.maxKeys:
-            if pm:
-                keys = S3Keys(S3Bucket, opts.prefix)
-                keys.chunk(chunkSize)
+    keys = S3Keys(S3Bucket, opts.prefix, srids=srids, bbox=opts.bbox)
+    if opts.bbox:
+        # Use max chunkSize as we always delete the whole columns
+        chunkSize = 1000
+        keys.chunk(chunkSize)
+        pm = PoolManager(numProcs=opts.nbThreads)
+        if startJob(keys, opts.force):
+            logger.info('Deletion started...')
+            previousNumberOfKeys = keys.maxKeys
+            while len(keys) > 0 and previousNumberOfKeys == keys.maxKeys:
                 if len(keys):
                     logger.info('New batch delete')
                     logger.info(str(keys))
-            if len(keys):
-                pm = PoolManager(numProcs=opts.nbThreads)
-                pm.imap_unordered(
-                    deleteKeys,
-                    keys,
-                    keys.chunkSize,
-                    callback=callback)
-            previousNumberOfKeys = len(keys)
-    logger.info('Deletion finished...')
+                    pm.imap_unordered(
+                        deleteKeys,
+                        keys,
+                        keys.chunkSize,
+                        callback=callback)
+                    keys.chunk(chunkSize)
+                previousNumberOfKeys = len(keys)
+    else:
+        chunkSize = opts.chunkSize or getMaxChunkSize(
+            opts.nbThreads, len(keys))
+        keys.chunk(chunkSize)
+        if startJob(keys, opts.force):
+            logger.info('Deletion started...')
+            # Make sure we delete the first batch
+            previousNumberOfKeys = keys.maxKeys
+            while len(keys) > 0 and previousNumberOfKeys == keys.maxKeys:
+                if pm:
+                    keys = S3Keys(S3Bucket, opts.prefix)
+                    keys.chunk(chunkSize)
+                    if len(keys):
+                        logger.info('New batch delete')
+                        logger.info(str(keys))
+                if len(keys):
+                    pm = PoolManager(numProcs=opts.nbThreads)
+                    pm.imap_unordered(
+                        deleteKeys,
+                        keys,
+                        keys.chunkSize,
+                        callback=callback)
+                previousNumberOfKeys = len(keys)
+        logger.info('Deletion finished...')
 
 
 if __name__ == '__main__':

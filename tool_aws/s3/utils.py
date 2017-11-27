@@ -1,5 +1,7 @@
 import math
 from textwrap import dedent
+from itertools import chain
+from gatilegrid import getTileGrid
 
 
 """
@@ -33,19 +35,57 @@ def getKeysFromS3(s3Bucket, prefix, maxKeys):
             for i in s3Bucket.objects.filter(Prefix=prefix).limit(maxKeys)]
 
 
+def reprojectExtent(extent):
+    # Dummy for now
+    return
+
+
+def getKeysTilingScheme(prefix, srids, bbox):
+    grids = []
+    pathLength = len(prefix.split('/'))
+    for s in srids:
+        g = getTileGrid(s)(extent=reprojectExtent(bbox))
+        minZoom = 0
+        maxZoom = len(g.RESOLUTIONS)
+        grids.append(g.iterGrid(minZoom, maxZoom))
+    for tileBounds, zoom, col, row in chain(*grids):
+        # TODO change me and pass in the format
+        if srids[0] == 21781:
+            col, row = row, col
+        if pathLength == 5:
+            yield {
+                'Key': prefix + '%s/%s/%s.png' % (zoom, col, row)
+            }
+        elif pathLength == 4:
+            yield {
+                'Key': prefix + '%s/%s/%s/%s.png' % (srids[0], zoom, col, row)
+            }
+
+
 class S3Keys:
     """
     This class is used to generate chunks of keys, based on prefix key.
     """
 
-    def __init__(self, s3Bucket, prefix, chunkSize=1, maxKeys=32000):
+    def __init__(
+            self, s3Bucket, prefix,
+            chunkSize=1, srids=[], bbox=[], maxKeys=32000):
         self._prefix = prefix
         self._chunkSize = chunkSize
-        self._keys = getKeysFromS3(s3Bucket, prefix, maxKeys)
+        if not bbox:
+            # Returns a list
+            self._keys = getKeysFromS3(s3Bucket, prefix, maxKeys)
+            self._keysGenerator = None
+        else:
+            # Returns a generator
+            self._keys = []
+            self._keysGenerator = getKeysTilingScheme(prefix, srids, bbox)
         self._nbKeys = len(self._keys)
         self._chunkedKeys = chunks(self._keys, self._chunkSize)
         self._bucketName = s3Bucket.name
         self._maxKeys = maxKeys
+        self._srids = srids
+        self._bbox = bbox
 
     def __str__(self):
         return dedent("""\\n
@@ -65,7 +105,20 @@ class S3Keys:
 
     def chunk(self, chunkSize):
         self._chunkSize = chunkSize
-        self._chunkedKeys = chunks(self._keys, self._chunkSize)
+        if not self._bbox:
+            self._chunkedKeys = chunks(self._keys, self._chunkSize)
+        else:
+            self._iterKeys()
+            self._chunkedKeys = chunks(self._keys, self._chunkSize)
+
+    def _iterKeys(self):
+        i = 0
+        self._keys = []
+        for k in self._keysGenerator:
+            self._keys.append(k)
+            i += 1
+            if i == self._maxKeys:
+                break
 
     @property
     def prefix(self):
