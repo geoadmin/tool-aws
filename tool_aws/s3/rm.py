@@ -27,6 +27,7 @@ def prefixType(val):
     if val.endswith('/*'):
         val = val[:len(val) - 1]
     if not val.startswith('/'):
+        usage()
         logger.error('Your prefix or path should start with a /')
         sys.exit(1)
     return val
@@ -37,6 +38,7 @@ def threadType(val):
         try:
             return int(val)
         except ValueError:
+            usage()
             logger.error('The number of threads must be an integer.')
             sys.exit(1)
     return multiprocessing.cpu_count()
@@ -49,16 +51,40 @@ def bboxType(val):
         except Exception as e:
             logging.error('Bad bbox definition')
             logging.error('%s' % e)
+            usage()
             sys.exit(1)
         if len(bx) != 4:
             logging.error(
                 'bbox should be a comma separated list of 2 coordinates')
+            usage()
             sys.exit(1)
         min_v = 1000000
         if bx[0] < min_v or bx[2] < min_v or bx[1] < min_v or bx[3] < min_v:
             logging.error('Bbox must be provided in lv95')
+            usage()
             sys.exit(1)
         return bx
+
+
+def imageFormatType(val):
+    if val not in ('png', 'jpeg', 'pngjpeg'):
+        logger.error('Unsupported image format %s' % val)
+        usage()
+        sys.exit(1)
+    return val
+
+
+def chunkType(val):
+    if not val.isdigit():
+        logger.error('Please provide a number for the chunks size')
+        usage()
+        sys.exit(1)
+    if val is not None:
+        val = int(val)
+        if val > 1000:
+            logger.info('Max chunk size is 1000... Using max value')
+            val = 1000
+    return val
 
 
 def createParser():
@@ -83,14 +109,6 @@ def createParser():
 
     mandatory = parser.add_argument_group('Mandatory arguments')
     mandatory.add_argument(
-        '--profile',
-        dest='profileName',
-        action='store',
-        default='default',
-        type=str,
-        help='AWS profile',
-        required=True)
-    mandatory.add_argument(
         '-b', '--bucket-name',
         dest='bucketName',
         action='store',
@@ -106,6 +124,14 @@ def createParser():
         required=True)
 
     optionGroup = parser.add_argument_group('Program options')
+    optionGroup.add_argument(
+        '--profile',
+        dest='profileName',
+        action='store',
+        default='default',
+        type=str,
+        help='AWS profile',
+        required=False)
     optionGroup.add_argument(
         '--bbox',
         dest='bbox',
@@ -124,10 +150,16 @@ def createParser():
         '-s', '--chunk-size',
         dest='chunkSize',
         action='store',
-        type=int,
+        type=chunkType,
         default=None,
         help='Chunk size for S3 batch deletion, \
             default is set to 1000 (maximal value for S3)')
+    optionGroup.add_argument(
+        '-i', '--imageFormat',
+        dest='imageFormat',
+        action='store',
+        type=imageFormatType,
+        help='The image format')
     optionGroup.add_argument(
         '-f', '--force',
         dest='force',
@@ -143,18 +175,27 @@ def parseArguments(parser, argv):
     supportedSrids = [21781, 2056, 4326, 3587]
     opts = parser.parse_args(argv[1:])
     if opts.bbox:
+        # Image format is required when a bbox is defined
+        if not hasattr(opts, 'imageFormat'):
+            usage()
+            logger.error(
+                'Image format is required when a bbox is defined (-i option)')
+            sys.exit(1)
         pathSplit = opts.prefix.split('/')
         if len(pathSplit) > 5:
+            usage()
             logger.error(
                 'Path should stop at the srid level definition')
             sys.exit(1)
         elif len(pathSplit) < 4:
+            usage()
             logger.error(
                 'Incorrect path definition, missing timestamp and/or layerid')
             sys.exit(1)
         elif len(pathSplit) == 5:
             srid = int(pathSplit[5])
             if srid not in supportedSrids:
+                usage()
                 logger.error('SRID %s is not supported' % srid)
                 sys.exit(1)
             srids = [srid]
@@ -226,9 +267,55 @@ def deleteKeys(keys):
     return response
 
 
+def deleteWithBBox(opts, S3Bucket, keys):
+    # Use max chunkSize as we always delete the whole columns
+    chunkSize = 1000
+    keys.chunk(chunkSize)
+    pm = PoolManager(numProcs=opts.nbThreads)
+    if startJob(keys, opts.force):
+        logger.info('Deletion started...')
+        previousNumberOfKeys = keys.maxKeys
+        while len(keys) > 0 and previousNumberOfKeys == keys.maxKeys:
+            if len(keys):
+                logger.info('New batch delete')
+                logger.info(str(keys))
+                pm.imap_unordered(
+                    deleteKeys,
+                    keys,
+                    keys.chunkSize,
+                    callback=callback)
+                keys.chunk(chunkSize)
+            previousNumberOfKeys = len(keys)
+
+
+def deleteWithPrefix(opts, S3Bucket, keys):
+    pm = None
+    chunkSize = opts.chunkSize or getMaxChunkSize(
+        opts.nbThreads, len(keys))
+    keys.chunk(chunkSize)
+    if startJob(keys, opts.force):
+        logger.info('Deletion started...')
+        # Make sure we delete the first batch
+        previousNumberOfKeys = keys.maxKeys
+        while len(keys) > 0 and previousNumberOfKeys == keys.maxKeys:
+            if pm:
+                keys = S3Keys(S3Bucket, opts.prefix)
+                keys.chunk(chunkSize)
+                if len(keys):
+                    logger.info('New batch delete')
+                    logger.info(str(keys))
+            if len(keys):
+                pm = PoolManager(numProcs=opts.nbThreads)
+                pm.imap_unordered(
+                    deleteKeys,
+                    keys,
+                    keys.chunkSize,
+                    callback=callback)
+            previousNumberOfKeys = len(keys)
+
+
 def main():
     global bucketName, profileName
-    pm = None
     parser = createParser()
     opts, srids = parseArguments(parser, sys.argv)
 
@@ -238,48 +325,10 @@ def main():
     S3Bucket = s3.Bucket(opts.bucketName)
     keys = S3Keys(S3Bucket, opts.prefix, srids=srids, bbox=opts.bbox)
     if opts.bbox:
-        # Use max chunkSize as we always delete the whole columns
-        chunkSize = 1000
-        keys.chunk(chunkSize)
-        pm = PoolManager(numProcs=opts.nbThreads)
-        if startJob(keys, opts.force):
-            logger.info('Deletion started...')
-            previousNumberOfKeys = keys.maxKeys
-            while len(keys) > 0 and previousNumberOfKeys == keys.maxKeys:
-                if len(keys):
-                    logger.info('New batch delete')
-                    logger.info(str(keys))
-                    pm.imap_unordered(
-                        deleteKeys,
-                        keys,
-                        keys.chunkSize,
-                        callback=callback)
-                    keys.chunk(chunkSize)
-                previousNumberOfKeys = len(keys)
+        deleteWithBBox(opts, S3Bucket, keys)
     else:
-        chunkSize = opts.chunkSize or getMaxChunkSize(
-            opts.nbThreads, len(keys))
-        keys.chunk(chunkSize)
-        if startJob(keys, opts.force):
-            logger.info('Deletion started...')
-            # Make sure we delete the first batch
-            previousNumberOfKeys = keys.maxKeys
-            while len(keys) > 0 and previousNumberOfKeys == keys.maxKeys:
-                if pm:
-                    keys = S3Keys(S3Bucket, opts.prefix)
-                    keys.chunk(chunkSize)
-                    if len(keys):
-                        logger.info('New batch delete')
-                        logger.info(str(keys))
-                if len(keys):
-                    pm = PoolManager(numProcs=opts.nbThreads)
-                    pm.imap_unordered(
-                        deleteKeys,
-                        keys,
-                        keys.chunkSize,
-                        callback=callback)
-                previousNumberOfKeys = len(keys)
-        logger.info('Deletion finished...')
+        deleteWithPrefix(opts, S3Bucket, keys)
+    logger.info('Deletion finished...')
 
 
 if __name__ == '__main__':
