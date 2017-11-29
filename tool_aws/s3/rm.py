@@ -155,10 +155,11 @@ def createParser():
         help='Chunk size for S3 batch deletion, \
             default is set to 1000 (maximal value for S3)')
     optionGroup.add_argument(
-        '-i', '--imageFormat',
+        '-i', '--image-format',
         dest='imageFormat',
         action='store',
         type=imageFormatType,
+        default=None,
         help='The image format')
     optionGroup.add_argument(
         '-f', '--force',
@@ -176,12 +177,12 @@ def parseArguments(parser, argv):
     opts = parser.parse_args(argv[1:])
     if opts.bbox:
         # Image format is required when a bbox is defined
-        if not hasattr(opts, 'imageFormat'):
+        if not opts.imageFormat:
             usage()
             logger.error(
                 'Image format is required when a bbox is defined (-i option)')
             sys.exit(1)
-        pathSplit = opts.prefix.split('/')
+        pathSplit = [p for p in opts.prefix.split('/') if p]
         if len(pathSplit) > 5:
             usage()
             logger.error(
@@ -193,7 +194,7 @@ def parseArguments(parser, argv):
                 'Incorrect path definition, missing timestamp and/or layerid')
             sys.exit(1)
         elif len(pathSplit) == 5:
-            srid = int(pathSplit[5])
+            srid = int(pathSplit[4])
             if srid not in supportedSrids:
                 usage()
                 logger.error('SRID %s is not supported' % srid)
@@ -206,7 +207,7 @@ def parseArguments(parser, argv):
 
 def callback(counter, response):
     if response:
-        logger.info('number of requests per batch: %s' % counter)
+        logger.info('number batch delete requests: %s' % counter)
         logger.info('result: %s' % response)
 
 
@@ -253,6 +254,9 @@ def deleteKeys(keys):
     session = boto3.session.Session(profile_name=profileName)
     s3 = session.resource('s3')
     S3Bucket = s3.Bucket(bucketName)
+    logger.info('Worker pid %s and parent pid %s' % (
+        multiprocessing.current_process().pid, os.getppid()))
+    logger.info('Deleting %s keys at a time' % len(keys['Objects']))
     try:
         response = S3Bucket.delete_objects(Delete=keys)
     except ClientError as e:
@@ -271,21 +275,23 @@ def deleteWithBBox(opts, S3Bucket, keys):
     # Use max chunkSize as we always delete the whole columns
     chunkSize = 1000
     keys.chunk(chunkSize)
-    pm = PoolManager(numProcs=opts.nbThreads)
     if startJob(keys, opts.force):
         logger.info('Deletion started...')
         previousNumberOfKeys = keys.maxKeys
         while len(keys) > 0 and previousNumberOfKeys == keys.maxKeys:
             if len(keys):
+                pm = PoolManager(numProcs=opts.nbThreads)
                 logger.info('New batch delete')
                 logger.info(str(keys))
+                # keys are pre-chunked in lists of chunksize
+                # send one list per process
                 pm.imap_unordered(
                     deleteKeys,
                     keys,
-                    keys.chunkSize,
+                    1,
                     callback=callback)
-                keys.chunk(chunkSize)
             previousNumberOfKeys = len(keys)
+            keys.chunk(chunkSize)
 
 
 def deleteWithPrefix(opts, S3Bucket, keys):
@@ -309,7 +315,7 @@ def deleteWithPrefix(opts, S3Bucket, keys):
                 pm.imap_unordered(
                     deleteKeys,
                     keys,
-                    keys.chunkSize,
+                    1,
                     callback=callback)
             previousNumberOfKeys = len(keys)
 
@@ -318,12 +324,15 @@ def main():
     global bucketName, profileName
     parser = createParser()
     opts, srids = parseArguments(parser, sys.argv)
+    bucketName = opts.bucketName
+    profileName = opts.profileName
 
     # Maximum number of keys to be listed at a time
     session = boto3.session.Session(profile_name=opts.profileName)
     s3 = session.resource('s3')
     S3Bucket = s3.Bucket(opts.bucketName)
-    keys = S3Keys(S3Bucket, opts.prefix, srids=srids, bbox=opts.bbox)
+    keys = S3Keys(S3Bucket, opts.prefix, srids=srids,
+                  bbox=opts.bbox, imageFormat=opts.imageFormat)
     if opts.bbox:
         deleteWithBBox(opts, S3Bucket, keys)
     else:
