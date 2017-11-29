@@ -171,9 +171,35 @@ def createParser():
     return parser
 
 
-def parseArguments(parser, argv):
+def guessSrids(opts):
     srids = []
+    if not opts.bbox:
+        return srids
     supportedSrids = [21781, 2056, 4326, 3587]
+    pathSplit = [p for p in opts.prefix.split('/') if p]
+    if len(pathSplit) > 5:
+        usage()
+        logger.error(
+            'Path should stop at the srid level definition')
+        sys.exit(1)
+    elif len(pathSplit) < 4:
+        usage()
+        logger.error(
+            'Incorrect path definition, missing timestamp and/or layerid')
+        sys.exit(1)
+    elif len(pathSplit) == 5:
+        srid = int(pathSplit[4])
+        if srid not in supportedSrids:
+            usage()
+            logger.error('SRID %s is not supported' % srid)
+            sys.exit(1)
+        srids = [srid]
+    else:
+        srids = supportedSrids
+    return srids
+
+
+def parseArguments(parser, argv):
     opts = parser.parse_args(argv[1:])
     if opts.bbox:
         # Image format is required when a bbox is defined
@@ -182,27 +208,7 @@ def parseArguments(parser, argv):
             logger.error(
                 'Image format is required when a bbox is defined (-i option)')
             sys.exit(1)
-        pathSplit = [p for p in opts.prefix.split('/') if p]
-        if len(pathSplit) > 5:
-            usage()
-            logger.error(
-                'Path should stop at the srid level definition')
-            sys.exit(1)
-        elif len(pathSplit) < 4:
-            usage()
-            logger.error(
-                'Incorrect path definition, missing timestamp and/or layerid')
-            sys.exit(1)
-        elif len(pathSplit) == 5:
-            srid = int(pathSplit[4])
-            if srid not in supportedSrids:
-                usage()
-                logger.error('SRID %s is not supported' % srid)
-                sys.exit(1)
-            srids = [srid]
-        else:
-            srids = supportedSrids
-    return opts, srids
+    return opts, guessSrids(opts)
 
 
 def callback(counter, response):
