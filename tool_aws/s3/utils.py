@@ -1,6 +1,5 @@
 import math
 from textwrap import dedent
-from itertools import chain
 from gatilegrid import getTileGrid
 
 
@@ -31,6 +30,8 @@ Function that returns keys given a bucket object and prefix.
 
 
 def getKeysFromS3(s3Bucket, prefix, maxKeys):
+    if prefix.startswith('/'):
+        prefix = prefix[1:]
     return [{'Key': i.key}
             for i in s3Bucket.objects.filter(Prefix=prefix).limit(maxKeys)]
 
@@ -40,26 +41,31 @@ def reprojectExtent(extent):
     return
 
 
-def getKeysTilingScheme(prefix, srids, bbox):
-    grids = []
-    pathLength = len(prefix.split('/'))
+"""
+Function that returns tiles keys given a prefix, a bbox and an image format.
+"""
+
+
+def getKeysTilingScheme(prefix, srids, bbox, imageFormat):
+    pathLength = len([p for p in prefix.split('/') if p])
     for s in srids:
         g = getTileGrid(s)(extent=reprojectExtent(bbox))
         minZoom = 0
-        maxZoom = len(g.RESOLUTIONS)
-        grids.append(g.iterGrid(minZoom, maxZoom))
-    for tileBounds, zoom, col, row in chain(*grids):
-        # TODO change me and pass in the format
-        if srids[0] == 21781:
-            col, row = row, col
-        if pathLength == 5:
-            yield {
-                'Key': prefix + '%s/%s/%s.png' % (zoom, col, row)
-            }
-        elif pathLength == 4:
-            yield {
-                'Key': prefix + '%s/%s/%s/%s.png' % (srids[0], zoom, col, row)
-            }
+        maxZoom = len(g.RESOLUTIONS) - 1
+        for tileBounds, zoom, col, row in g.iterGrid(minZoom, maxZoom):
+            if g.spatialReference == 21781:
+                col, row = row, col
+            if pathLength == 5:
+                yield {
+                    'Key': prefix + '%s/%s/%s.%s' % (zoom, col, row,
+                                                     imageFormat)
+                }
+            elif pathLength == 4:
+                yield {
+                    'Key': prefix + '%s/%s/%s/%s.%s' % (g.spatialReference,
+                                                        zoom, col, row,
+                                                        imageFormat)
+                }
 
 
 class S3Keys:
@@ -69,7 +75,8 @@ class S3Keys:
 
     def __init__(
             self, s3Bucket, prefix,
-            chunkSize=1, srids=[], bbox=[], maxKeys=32000):
+            chunkSize=1, srids=[], bbox=[],
+            maxKeys=32000, imageFormat=None):
         self._prefix = prefix
         self._chunkSize = chunkSize
         if not bbox:
@@ -79,8 +86,8 @@ class S3Keys:
         else:
             # Returns a generator
             self._keys = []
-            self._keysGenerator = getKeysTilingScheme(prefix, srids, bbox)
-        self._nbKeys = len(self._keys)
+            self._keysGenerator = getKeysTilingScheme(
+                prefix, srids, bbox, imageFormat)
         self._chunkedKeys = chunks(self._keys, self._chunkSize)
         self._bucketName = s3Bucket.name
         self._maxKeys = maxKeys
@@ -93,7 +100,7 @@ class S3Keys:
             Chunk size    : %d
             Prefix        : %s
             Bucket name   : %s
-            """ % (self._nbKeys, self._chunkSize,
+            """ % (len(self._keys), self._chunkSize,
                    self._prefix, self._bucketName))
 
     def __iter__(self):
@@ -101,7 +108,7 @@ class S3Keys:
             yield {'Objects': cKeys, 'Quiet': True}
 
     def __len__(self):
-        return self._nbKeys
+        return len(self._keys)
 
     def chunk(self, chunkSize):
         self._chunkSize = chunkSize

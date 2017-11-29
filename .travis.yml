@@ -6,4 +6,5 @@ install:
 script:
 - flake8 tool_aws tests
 - coverage run --source=tool_aws setup.py test
+- coverage report -m
 after_success: coveralls
