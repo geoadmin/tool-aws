@@ -1,5 +1,6 @@
 import math
 from textwrap import dedent
+from tool_aws.utils import reprojectBBox
 from gatilegrid import getTileGrid
 
 
@@ -36,11 +37,6 @@ def getKeysFromS3(s3Bucket, prefix, maxKeys):
             for i in s3Bucket.objects.filter(Prefix=prefix).limit(maxKeys)]
 
 
-def reprojectExtent(extent):
-    # Dummy for now
-    return
-
-
 """
 Function that returns tiles keys given a prefix, a bbox and an image format.
 """
@@ -49,7 +45,7 @@ Function that returns tiles keys given a prefix, a bbox and an image format.
 def getKeysTilingScheme(prefix, srids, bbox, imageFormat):
     pathLength = len([p for p in prefix.split('/') if p])
     for s in srids:
-        g = getTileGrid(s)(extent=reprojectExtent(bbox))
+        g = getTileGrid(s)(extent=reprojectBBox(bbox, s))
         minZoom = 0
         maxZoom = len(g.RESOLUTIONS) - 1
         for tileBounds, zoom, col, row in g.iterGrid(minZoom, maxZoom):
