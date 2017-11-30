@@ -11,6 +11,8 @@ from textwrap import dedent
 from poolmanager import PoolManager
 from botocore.exceptions import ClientError
 from tool_aws.s3.utils import S3Keys, getMaxChunkSize
+from botocore.parsers import ResponseParserError
+
 
 logging.basicConfig(level=logging.INFO)
 logging.getLogger('boto3').setLevel(logging.CRITICAL)
@@ -268,12 +270,19 @@ def deleteKeys(keys):
     except ClientError as e:
         if e.response['Error']['Code'] == 'SlowDown':
             logger.info('We are going to fast for S3 it seems.')
-            logger.info('Pausing for 5 sec...')
-            time.sleep(5)
+            logger.info('Pausing for 30 sec...')
+            time.sleep(30)
             return deleteKeys(keys)
-        raise Exception(str(e))
+        logger.error(e, exc_info=True)
+        raise e
+    # This error is triggered when the S3 XML response is invalid
+    # S3 sometimes does that when you send too many requests
+    except ResponseParserError as e:
+        logger.error(e, exc_info=True)
+        return deleteKeys(keys)
     except Exception as e:
-        raise Exception(str(e))
+        logger.error(e, exc_info=True)
+        raise e
     return response
 
 
