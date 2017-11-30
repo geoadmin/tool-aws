@@ -42,12 +42,12 @@ Function that returns tiles keys given a prefix, a bbox and an image format.
 """
 
 
-def getKeysTilingScheme(prefix, srids, bbox, imageFormat):
+def getKeysTilingScheme(prefix, srids, bbox, imageFormat, lowRes, highRes):
     pathLength = len([p for p in prefix.split('/') if p])
     for s in srids:
         g = getTileGrid(s)(extent=reprojectBBox(bbox, s))
-        minZoom = 0
-        maxZoom = len(g.RESOLUTIONS) - 1
+        minZoom = g.getClosestZoom(lowRes)
+        maxZoom = g.getClosestZoom(highRes)
         for tileBounds, zoom, col, row in g.iterGrid(minZoom, maxZoom):
             if g.spatialReference == 21781:
                 col, row = row, col
@@ -72,7 +72,7 @@ class S3Keys:
     def __init__(
             self, s3Bucket, prefix,
             chunkSize=1, srids=[], bbox=[],
-            maxKeys=32000, imageFormat=None):
+            maxKeys=32000, imageFormat='png', lowRes=0, highRes=float('inf')):
         self._prefix = prefix
         self._chunkSize = chunkSize
         if not bbox:
@@ -83,7 +83,7 @@ class S3Keys:
             # Returns a generator
             self._keys = []
             self._keysGenerator = getKeysTilingScheme(
-                prefix, srids, bbox, imageFormat)
+                prefix, srids, bbox, imageFormat, lowRes, highRes)
         self._chunkedKeys = chunks(self._keys, self._chunkSize)
         self._bucketName = s3Bucket.name
         self._maxKeys = maxKeys
