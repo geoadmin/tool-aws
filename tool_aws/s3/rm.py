@@ -89,6 +89,16 @@ def chunkType(val):
     return val
 
 
+def resolutionType(val):
+    if val or not val.isdigit():
+        logger.error('Please provide a numeric value for low resolution')
+        usage()
+        sys.exit(1)
+    val = float(val)
+    if val >= 0:
+        return val
+
+
 def createParser():
     parser = ap.ArgumentParser(
         description=dedent("""\
@@ -163,6 +173,20 @@ def createParser():
         type=imageFormatType,
         default=None,
         help='The image format')
+    optionGroup.add_argument(
+        '-lr', '--lowest-resolution',
+        dest='lowRes',
+        action='store',
+        type=resolutionType,
+        default=float('inf'),
+        help='The lowest resolution in meters')
+    optionGroup.add_argument(
+        '-hr', '--highest-resolution',
+        dest='highRes',
+        action='store',
+        type=resolutionType,
+        default=0,
+        help='The highest resolution in meters')
     optionGroup.add_argument(
         '-f', '--force',
         dest='force',
@@ -347,7 +371,8 @@ def main():
     s3 = session.resource('s3')
     S3Bucket = s3.Bucket(opts.bucketName)
     keys = S3Keys(S3Bucket, opts.prefix, srids=srids,
-                  bbox=opts.bbox, imageFormat=opts.imageFormat)
+                  bbox=opts.bbox, imageFormat=opts.imageFormat,
+                  lowRes=opts.lowRes, highRes=opts.highRes)
     if opts.bbox:
         deleteWithBBox(opts, S3Bucket, keys)
     else:
