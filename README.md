@@ -25,7 +25,8 @@ You can always use the help function:
 ```
 $ s3rm --help
 usage: s3rm [-h] -b BUCKETNAME -p PREFIX [--profile PROFILENAME] [--bbox BBOX]
-            [-n NBTHREADS] [-s CHUNKSIZE] [-i IMAGEFORMAT] [-f]
+            [-n NBTHREADS] [-s CHUNKSIZE] [-i IMAGEFORMAT] [-lr LOWRES]
+            [-hr HIGHRES] [-f]
 
 Purpose:
     This script is intended for efficient and MASSIVE RECURSIVE
@@ -55,6 +56,10 @@ Program options:
                         1000 (maximal value for S3)
   -i IMAGEFORMAT, --image-format IMAGEFORMAT
                         The image format
+  -lr LOWRES, --lowest-resolution LOWRES
+                        The lowest resolution in meters
+  -hr HIGHRES, --highest-resolution HIGHRES
+                        The highest resolution in meters
   -f, --force           force the removal, i.e. no prompt for confirmation.
 
 Disclaimer:
