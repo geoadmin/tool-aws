@@ -21,7 +21,7 @@ logger = logging.getLogger(__name__)
 
 
 def usage():
-    logger.info('usage:\n%s [options]\n') % (os.path.basename(sys.argv[0]))
+    logger.info('usage:\n%s [options]\n' % os.path.basename(sys.argv[0]))
     logger.info('try -h or --help for extended help')
 
 
