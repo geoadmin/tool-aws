@@ -51,16 +51,17 @@ def getKeysTilingScheme(prefix, srids, bbox, imageFormat, lowRes, highRes):
         for tileBounds, zoom, col, row in g.iterGrid(minZoom, maxZoom):
             if g.spatialReference == 21781:
                 col, row = row, col
+            prefix = prefix[1:] if prefix.startswith('/') else prefix
             if pathLength == 5:
                 yield {
-                    'Key': prefix + '%s/%s/%s.%s' % (zoom, col, row,
-                                                     imageFormat)
+                    'Key': prefix + u'%s/%s/%s.%s' % (zoom, col, row,
+                                                      imageFormat)
                 }
             elif pathLength == 4:
                 yield {
-                    'Key': prefix + '%s/%s/%s/%s.%s' % (g.spatialReference,
-                                                        zoom, col, row,
-                                                        imageFormat)
+                    'Key': prefix + u'%s/%s/%s/%s.%s' % (g.spatialReference,
+                                                         zoom, col, row,
+                                                         imageFormat)
                 }
 
 

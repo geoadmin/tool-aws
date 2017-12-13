@@ -15,7 +15,7 @@ install_requires = [
 
 
 setup(name=u'tool_aws',
-      version=u'0.0.7',
+      version=u'0.0.8',
       description=u'AWS scripts for geoadmin',
       author=u'Andrea Borghi, Loic Gasser',
       author_email=u'andrea.borghi@swisstopo.ch, loicgasser4@gmail.com',

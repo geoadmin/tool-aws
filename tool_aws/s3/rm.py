@@ -90,7 +90,7 @@ def chunkType(val):
 
 
 def resolutionType(val):
-    if val is None or not float(val):
+    if val is None or not val.replace('.', '1').isdigit():
         logger.error('Please provide a numeric value for low resolution')
         usage()
         sys.exit(1)
@@ -293,7 +293,7 @@ def deleteKeys(keys):
         response = S3Bucket.delete_objects(Delete=keys)
     except ClientError as e:
         if e.response['Error']['Code'] == 'SlowDown':
-            logger.info('We are going to fast for S3 it seems.')
+            logger.info('We are going too fast for S3 it seems.')
             logger.info('Pausing for 30 sec...')
             time.sleep(30)
             return deleteKeys(keys)
@@ -302,7 +302,9 @@ def deleteKeys(keys):
     # This error is triggered when the S3 XML response is invalid
     # S3 sometimes does that when you send too many requests
     except ResponseParserError as e:
-        logger.error(e, exc_info=True)
+        logger.info('We are going too fast for S3 it seems.')
+        logger.info('Pausing for 30 sec...')
+        time.sleep(30)
         return deleteKeys(keys)
     except Exception as e:
         logger.error(e, exc_info=True)
