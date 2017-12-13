@@ -201,7 +201,7 @@ def guessSrids(opts):
     srids = []
     if not opts.bbox:
         return srids
-    supportedSrids = [21781, 2056, 4326, 3587]
+    supportedSrids = [21781, 2056, 4326, 3857]
     pathSplit = [p for p in opts.prefix.split('/') if p]
     if len(pathSplit) > 5:
         usage()
