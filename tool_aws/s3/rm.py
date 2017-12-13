@@ -90,7 +90,7 @@ def chunkType(val):
 
 
 def resolutionType(val):
-    if val or not val.isdigit():
+    if val is None or not float(val):
         logger.error('Please provide a numeric value for low resolution')
         usage()
         sys.exit(1)
