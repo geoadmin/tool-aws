@@ -221,3 +221,42 @@ class TestS3Utils(unittest.TestCase):
         with mock.patch.object(sys, 'argv', testArgvs):
             with self.assertRaises(BaseException):
                 parseArguments(parser, sys.argv)
+
+    def test_parser_with_bbox_hr_lr(self):
+        parser = createParser()
+        testArgvs = [
+            's3rm',
+            '--bucket-name', 'myDummyBucket',
+            '--prefix', '/1.0.0/ch.dummy/default/current/2056/*',
+            '--bbox', '1200000,2200000,1500000,2500000',
+            '-lr', '2.5',
+            '-hr', '1.5',
+            '--image-format', 'jpeg',
+            '-n', '3']
+        with mock.patch.object(sys, 'argv', testArgvs):
+            opts, srids = parseArguments(parser, sys.argv)
+            self.assertEqual(opts.prefix,
+                             '/1.0.0/ch.dummy/default/current/2056/')
+            self.assertEqual(opts.bucketName, 'myDummyBucket')
+            self.assertEqual(opts.profileName, 'default')
+            self.assertEqual(opts.nbThreads, 3)
+            self.assertEqual(len(srids), 1)
+            self.assertEqual(','.join([str(int(b)) for b in opts.bbox]),
+                             '1200000,2200000,1500000,2500000')
+            self.assertEqual(opts.lowRes, 2.5)
+            self.assertEqual(opts.highRes, 1.5)
+
+    def test_parser_with_bbox_bad_hr_lr(self):
+        parser = createParser()
+        testArgvs = [
+            's3rm',
+            '--bucket-name', 'myDummyBucket',
+            '--prefix', '/1.0.0/ch.dummy/default/current/2056/*',
+            '--bbox', '1200000,2200000,1500000,2500000',
+            '-lr', '2.5',
+            '-hr', 'a1.5',
+            '--image-format', 'jpeg',
+            '-n', '3']
+        with mock.patch.object(sys, 'argv', testArgvs):
+            with self.assertRaises(BaseException):
+                parseArguments(parser, sys.argv)
