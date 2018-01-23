@@ -314,7 +314,11 @@ def deleteKeys(keys):
 
 def deleteWithBBox(opts, S3Bucket, keys):
     # Use max chunkSize as we always delete the whole columns
+    nbKeysDeleted = 0
+    nbKeysTotal = keys.countTiles()
     chunkSize = 1000
+    logger.info(
+        'We are about to trigger %s DELETE requests' % nbKeysTotal)
     keys.chunk(chunkSize)
     if startJob(keys, opts.force):
         logger.info('Deletion started...')
@@ -333,9 +337,16 @@ def deleteWithBBox(opts, S3Bucket, keys):
                     callback=callback)
             previousNumberOfKeys = len(keys)
             keys.chunk(chunkSize)
+            nbKeysDeleted += previousNumberOfKeys
+            logger.info(
+                'We have deleted %s/%s tiles.' % (nbKeysDeleted, nbKeysTotal))
 
 
 def deleteWithPrefix(opts, S3Bucket, keys):
+    nbKeysDeleted = 0
+    nbKeysTotal = keys.countTiles()
+    logger.info(
+        'We will at most trigger %s DELETE requests' % nbKeysTotal)
     pm = None
     chunkSize = opts.chunkSize or getMaxChunkSize(
         opts.nbThreads, len(keys))
@@ -359,6 +370,10 @@ def deleteWithPrefix(opts, S3Bucket, keys):
                     1,
                     callback=callback)
             previousNumberOfKeys = len(keys)
+            nbKeysDeleted += previousNumberOfKeys
+            logger.info(
+                'We have deleted %s/%s tiles at most.' % (
+                    nbKeysDeleted, nbKeysTotal))
 
 
 def main():
