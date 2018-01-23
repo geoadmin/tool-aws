@@ -5,6 +5,21 @@ from gatilegrid import getTileGrid
 
 
 """
+Function that returns the total number of tiles.
+"""
+
+
+def countTiles(srid, lowRes, highRes, bbox=None):
+    if bbox:
+        g = getTileGrid(srid)(extent=reprojectBBox(bbox, srid))
+    else:
+        g = getTileGrid(srid)()
+    minZoom = g.getClosestZoom(lowRes)
+    maxZoom = g.getClosestZoom(highRes)
+    return g.totalNumberOfTiles(minZoom, maxZoom)
+
+
+"""
 Function that yields successive n-sized chunks from l.
 """
 
@@ -73,7 +88,7 @@ class S3Keys:
     def __init__(
             self, s3Bucket, prefix,
             chunkSize=1, srids=[], bbox=[],
-            maxKeys=32000, imageFormat='png', lowRes=0, highRes=float('inf')):
+            maxKeys=64000, imageFormat='png', lowRes=0, highRes=float('inf')):
         self._prefix = prefix
         self._chunkSize = chunkSize
         if not bbox:
@@ -90,6 +105,8 @@ class S3Keys:
         self._maxKeys = maxKeys
         self._srids = srids
         self._bbox = bbox
+        self._lowRes = lowRes
+        self._highRes = highRes
 
     def __str__(self):
         return dedent("""\\n
@@ -114,6 +131,13 @@ class S3Keys:
         else:
             self._iterKeys()
             self._chunkedKeys = chunks(self._keys, self._chunkSize)
+
+    def countTiles(self):
+        c = 0
+        for srid in self._srids:
+            c += countTiles(
+                    srid, self._lowRes, self._highRes, bbox=self._bbox)
+        return c
 
     def _iterKeys(self):
         i = 0
