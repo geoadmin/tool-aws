@@ -1,6 +1,7 @@
 autopep8
 awscli==1.11.65
 coveralls
+pycodestyle==2.3
 flake8
 mock==1.0.1
 nose
