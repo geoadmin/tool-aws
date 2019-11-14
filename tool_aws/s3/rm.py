@@ -4,6 +4,7 @@ import time
 import os
 import sys
 import boto3
+from builtins import input
 import logging
 import multiprocessing
 import argparse as ap
@@ -160,14 +161,14 @@ def createParser():
         dest='nbThreads',
         action='store',
         type=threadType,
-        default=None,
+        default=multiprocessing.cpu_count(),
         help='Number of threads (subprocess), default: machine number of CPUs')
     optionGroup.add_argument(
         '-s', '--chunk-size',
         dest='chunkSize',
         action='store',
         type=chunkType,
-        default=None,
+        default=1000,
         help='Chunk size for S3 batch deletion, \
             default is set to 1000 (maximal value for S3)')
     optionGroup.add_argument(
