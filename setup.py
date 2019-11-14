@@ -9,7 +9,7 @@ with open("README.md", "r") as fh:
     long_description = fh.read()
 
 install_requires = [
-  'boto3 >= 1.4.4',
+  'boto3 >= 1.10',
   'poolmanager >= 0.0.5',
   'configparser == 3.5.0',
   'gatilegrid >= 0.1.7',
