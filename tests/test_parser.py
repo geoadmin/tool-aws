@@ -124,7 +124,7 @@ class TestS3Utils(unittest.TestCase):
             '--prefix', '/1.0.0/ch.dummy/default/current/2056/',
             '--bbox', '1200000,2200000,1500000,2500000',
             '--image-format', 'png',
-            '--low-resolution', '-1']
+            '-lr', '-1']
         with mock.patch.object(sys, 'argv', testArgvs):
             with self.assertRaises(BaseException):
                 parseArguments(parser, sys.argv)
@@ -137,7 +137,7 @@ class TestS3Utils(unittest.TestCase):
             '--prefix', '/1.0.0/ch.dummy/default/current/2056/',
             '--bbox', '1200000,2200000,1500000,2500000',
             '--image-format', 'png',
-            '--high-resolution', '-1']
+            '-hr', '-1']
         with mock.patch.object(sys, 'argv', testArgvs):
             with self.assertRaises(BaseException):
                 parseArguments(parser, sys.argv)
