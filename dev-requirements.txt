@@ -2,6 +2,9 @@ awscli
 coveralls
 mock==1.0.1
 nose
-flake8==3.7.8                                                                                                                                                                                           
 pycodestyle==2.5.0
 autopep8==1.4.4
+pep8==1.7.1
+pyflakes==2.1.1
+boto3
+botocore
