@@ -1,8 +1,11 @@
+import sys
 import math
 from textwrap import dedent
 from tool_aws.utils import reprojectBBox
 from gatilegrid import getTileGrid
 
+
+PY3 = sys.version_info >= (3,0)
 
 """
 Function that returns the total number of tiles.
@@ -25,8 +28,12 @@ Function that yields successive n-sized chunks from l.
 
 
 def chunks(l, n):
-    for i in xrange(0, len(l), n):
-        yield l[i:i + n]
+    if PY3:
+        for i in range(0, len(l), n):
+            yield l[i:i + n]
+    else:
+        for i in xrange(0, len(l), n):
+            yield l[i:i + n]
 
 
 """
@@ -69,12 +76,12 @@ def getKeysTilingScheme(prefix, srids, bbox, imageFormat, lowRes, highRes):
             prefix = prefix[1:] if prefix.startswith('/') else prefix
             if pathLength == 5:
                 yield {
-                    'Key': prefix + u'%s/%s/%s.%s' % (zoom, col, row,
+                    'Key': prefix + '%s/%s/%s.%s' % (zoom, col, row,
                                                       imageFormat)
                 }
             elif pathLength == 4:
                 yield {
-                    'Key': prefix + u'%s/%s/%s/%s.%s' % (g.spatialReference,
+                    'Key': prefix + '%s/%s/%s/%s.%s' % (g.spatialReference,
                                                          zoom, col, row,
                                                          imageFormat)
                 }
