@@ -9,7 +9,7 @@ with open("README.md", "r") as fh:
     long_description = fh.read()
 
 install_requires = [
-  'boto3 >= 1.10',
+  'boto3',
   'poolmanager >= 0.0.5',
   'configparser == 3.5.0',
   'gatilegrid >= 0.1.7',
@@ -18,7 +18,7 @@ install_requires = [
 
 
 setup(name=u'tool_aws',
-      version=u'0.2.0',
+      version=u'0.2.1',
       description=u'AWS scripts for geoadmin',
       author=u'Andrea Borghi, Loic Gasser',
       author_email=u'andrea.borghi@swisstopo.ch, loicgasser4@gmail.com',
