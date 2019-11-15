@@ -1,7 +1,10 @@
 language: python
 python:
 - 2.7
+- 3.6
+- 3.7
 install:
+- pip install -U pip
 - pip install -r dev-requirements.txt
 script:
 - flake8 tool_aws tests

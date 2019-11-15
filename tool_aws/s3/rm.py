@@ -4,6 +4,7 @@ import time
 import os
 import sys
 import boto3
+from builtins import input
 import logging
 import multiprocessing
 import argparse as ap
@@ -12,7 +13,11 @@ from poolmanager import PoolManager
 from botocore.exceptions import ClientError
 from tool_aws.s3.utils import S3Keys, getMaxChunkSize
 from botocore.parsers import ResponseParserError
-from httplib import IncompleteRead
+
+try:
+    from httplib import IncompleteRead
+except ImportError:
+    from http.client import IncompleteRead
 
 logging.basicConfig(level=logging.INFO)
 logging.getLogger('boto3').setLevel(logging.CRITICAL)
@@ -156,14 +161,14 @@ def createParser():
         dest='nbThreads',
         action='store',
         type=threadType,
-        default=None,
+        default=multiprocessing.cpu_count(),
         help='Number of threads (subprocess), default: machine number of CPUs')
     optionGroup.add_argument(
         '-s', '--chunk-size',
         dest='chunkSize',
         action='store',
         type=chunkType,
-        default=None,
+        default=1000,
         help='Chunk size for S3 batch deletion, \
             default is set to 1000 (maximal value for S3)')
     optionGroup.add_argument(
@@ -263,17 +268,17 @@ def startJob(keys, force):
         return True
 
     while True:
-        userInput = raw_input(
+        userInput = input(
             'Are you sure you want to continue (there is no way back)? y/n:')
         userInput = userInput.lower()
-        if userInput not in (u'y', u'n'):
+        if userInput not in ('y', 'n'):
             logger.info('Error: unrecognized option \'%s\'' % userInput)
             logger.info('Please provide a valid input character...')
             continue
         else:
             break
 
-    if userInput == u'n':
+    if userInput == 'n':
         logger.info('You have refused to proceed, the script will now abort.')
         return False
     return True
