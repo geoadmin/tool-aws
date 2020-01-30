@@ -233,7 +233,7 @@ def guessSrids(opts):
 def parseArguments(parser, argv):
     opts = parser.parse_args(argv[1:])
     # bbox is required when a highest or lowest resolution is defined
-    if opts.lowRes or opts.highRes:
+    if opts.lowRes != float('inf') or opts.highRes != 0:
         if not opts.bbox:
             usage()
             logger.error(
