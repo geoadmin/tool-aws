@@ -237,7 +237,8 @@ def parseArguments(parser, argv):
         if not opts.bbox:
             usage()
             logger.error(
-                'Resolutions can only be used when a bbox is defined (--bbox option)'
+                'Resolutions can only be used when a bbox is defined ' +
+                '(--bbox option)'
             )
             sys.exit(1)
     if opts.bbox:
