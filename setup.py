@@ -13,12 +13,12 @@ install_requires = [
   'poolmanager >= 0.0.5',
   'configparser == 3.5.0',
   'gatilegrid >= 0.1.7',
-  'pyproj >=1.9,<2.0',
+  'pyproj >=1.9',
 ]
 
 
 setup(name=u'tool_aws',
-      version=u'0.2.2',
+      version=u'0.2.3',
       description=u'AWS scripts for geoadmin',
       author=u'Andrea Borghi, Loic Gasser',
       author_email=u'andrea.borghi@swisstopo.ch, loicgasser4@gmail.com',
@@ -38,6 +38,7 @@ setup(name=u'tool_aws',
           'Programming Language :: Python :: 3.6',
           'Programming Language :: Python :: 3.7',
           'Programming Language :: Python :: 3.8',
+          'Programming Language :: Python :: 3.9',
           'Topic :: Scientific/Engineering :: GIS',
           'Topic :: Software Development :: Libraries :: Python Modules'
       ],

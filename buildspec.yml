@@ -1,0 +1,14 @@
+version: 0.2
+
+phases:
+  install:
+    runtime-versions:
+      python: 3.9
+  build:
+    commands:
+      - echo "Setting up dev mode with python version $(python --version)..."
+      - pip install --upgrade pip
+      - pip install -e .
+      - pip install -r dev-requirements.txt
+      - echo "Running nose testse..."
+      - nosetests -v tests/
