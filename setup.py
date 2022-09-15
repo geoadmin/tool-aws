@@ -11,7 +11,7 @@ with open("README.md", "r") as fh:
 install_requires = [
   'boto3',
   'poolmanager >= 0.0.5',
-  'configparser == 3.5.0',
+  'configparser >= 3.5.0',
   'gatilegrid >= 0.1.7',
   'pyproj >=1.9',
 ]
