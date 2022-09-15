@@ -251,12 +251,6 @@ def parseArguments(parser, argv):
     return opts, guessSrids(opts)
 
 
-def callback(counter, response):
-    if response:
-        logger.info('number batch delete requests: %s' % counter)
-        logger.info('result: %s' % response)
-
-
 def startJob(keys, force):
     if len(keys) == 0:
         logger.info('Actually, there\'s nothing to do... aborting')
@@ -313,6 +307,7 @@ def deleteKeys(keys):
     except Exception as e:
         logger.error(e, exc_info=True)
         raise e
+    logger.info('result: %s' % response)
     return response
 
 
