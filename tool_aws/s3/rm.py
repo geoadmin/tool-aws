@@ -352,7 +352,6 @@ def deleteWithPrefix(opts, S3Bucket, keys):
     nbKeysTotal = keys.countTiles()
     logger.info(
         'We will at most trigger %s DELETE requests' % nbKeysTotal)
-    executor = None
     chunkSize = opts.chunkSize or getMaxChunkSize(
         opts.nbThreads, len(keys))
     keys.chunk(chunkSize)
