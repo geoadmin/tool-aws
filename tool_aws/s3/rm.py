@@ -155,7 +155,8 @@ def createParser():
         action='store',
         type=bboxType,
         default=None,
-        help='a bounding box in lv95')
+        help='a bounding box in lv95. Only works in combination with  \
+            option --image-format')
     optionGroup.add_argument(
         '-n', '--threads-number',
         dest='nbThreads',
@@ -177,7 +178,7 @@ def createParser():
         action='store',
         type=imageFormatType,
         default=None,
-        help='The image format')
+        help='The image format. Only working with --bbox option.')
     optionGroup.add_argument(
         '-lr', '--lowest-resolution',
         dest='lowRes',
@@ -239,6 +240,14 @@ def parseArguments(parser, argv):
             logger.error(
                 'Resolutions can only be used when a bbox is defined ' +
                 '(--bbox option)'
+            )
+            sys.exit(1)
+    if opts.imageFormat:
+        if not opts.bbox:
+            usage()
+            logger.error(
+                'The image format will not bee taken into account without ' +
+                'setting (--bbox option)'
             )
             sys.exit(1)
     if opts.bbox:
@@ -315,7 +324,7 @@ def deleteWithBBox(opts, S3Bucket, keys):
     # Use max chunkSize as we always delete the whole columns
     nbKeysDeleted = 0
     nbKeysTotal = keys.countTiles()
-    chunkSize = 1000
+    chunkSize = opts.chunkSize or 1000
     logger.info(
         'We are about to trigger %s DELETE requests' % nbKeysTotal)
     keys.chunk(chunkSize)
