@@ -49,7 +49,7 @@ setup(name=u'tool_aws',
       zip_safe=False,
       test_suite='nose.collector',
       install_requires=install_requires,
-      python_requires='>3.6, <4',
+      python_requires='>=3.6, <4',
       entry_points={
           'console_scripts': [
               's3rm=tool_aws.s3.rm:main',
