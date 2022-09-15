@@ -9,16 +9,23 @@ with open("README.md", "r") as fh:
     long_description = fh.read()
 
 install_requires = [
-  'boto3',
-  'poolmanager >= 0.0.5',
-  'configparser >= 3.5.0',
-  'gatilegrid >= 0.1.7',
-  'pyproj >=1.9',
+    'boto3 == 1.24.73',
+    'botocore == 1.27.73',
+    'certifi == 2022.9.14',
+    'configparser == 5.3.0',
+    'future == 0.18.2',
+    'gatilegrid == 0.2.0',
+    'jmespath == 1.0.1',
+    'pyproj == 3.4.0',
+    'python-dateutil == 2.8.2',
+    's3transfer == 0.6.0',
+    'six == 1.16.0',
+    'urllib3 == 1.26.12',
 ]
 
 
 setup(name=u'tool_aws',
-      version=u'0.2.3',
+      version=u'0.2.4',
       description=u'AWS scripts for geoadmin',
       author=u'Andrea Borghi, Loic Gasser',
       author_email=u'andrea.borghi@swisstopo.ch, loicgasser4@gmail.com',
@@ -30,9 +37,6 @@ setup(name=u'tool_aws',
           'Intended Audience :: Developers',
           'License :: OSI Approved :: MIT License',
           'Operating System :: OS Independent',
-          'Programming Language :: Python',
-          'Programming Language :: Python :: 2',
-          'Programming Language :: Python :: 2.7',
           'Programming Language :: Python :: 3',
           'Programming Language :: Python :: 3.5',
           'Programming Language :: Python :: 3.6',
@@ -47,7 +51,7 @@ setup(name=u'tool_aws',
       zip_safe=False,
       test_suite='nose.collector',
       install_requires=install_requires,
-      python_requires='>2.6, !=3.0.*, !=3.1.*, !=3.2.*, !=3.3.*, !=3.4.*, <4',
+      python_requires='!=3.0.*, !=3.1.*, !=3.2.*, !=3.3.*, !=3.4.*, <4',
       entry_points={
           'console_scripts': [
               's3rm=tool_aws.s3.rm:main',

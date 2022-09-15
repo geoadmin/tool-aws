@@ -9,7 +9,7 @@ import logging
 import multiprocessing
 import argparse as ap
 from textwrap import dedent
-from poolmanager import PoolManager
+from concurrent.futures import ProcessPoolExecutor
 from botocore.exceptions import ClientError
 from tool_aws.s3.utils import S3Keys, getMaxChunkSize
 from botocore.parsers import ResponseParserError
@@ -329,16 +329,13 @@ def deleteWithBBox(opts, S3Bucket, keys):
         previousNumberOfKeys = keys.maxKeys
         while len(keys) > 0 and previousNumberOfKeys == keys.maxKeys:
             if len(keys):
-                pm = PoolManager(numProcs=opts.nbThreads)
                 logger.info('New batch delete')
                 logger.info(str(keys))
                 # keys are pre-chunked in lists of chunksize
                 # send one list per process
-                pm.imap_unordered(
-                    deleteKeys,
-                    keys,
-                    1,
-                    callback=callback)
+                with ProcessPoolExecutor(
+                        max_workers=opts.nbThreads) as executor:
+                    executor.map(deleteKeys, keys, timeout=3 * 60, chunksize=1)
             previousNumberOfKeys = len(keys)
             keys.chunk(chunkSize)
             nbKeysDeleted += previousNumberOfKeys
@@ -351,7 +348,7 @@ def deleteWithPrefix(opts, S3Bucket, keys):
     nbKeysTotal = keys.countTiles()
     logger.info(
         'We will at most trigger %s DELETE requests' % nbKeysTotal)
-    pm = None
+    executor = None
     chunkSize = opts.chunkSize or getMaxChunkSize(
         opts.nbThreads, len(keys))
     keys.chunk(chunkSize)
@@ -360,19 +357,16 @@ def deleteWithPrefix(opts, S3Bucket, keys):
         # Make sure we delete the first batch
         previousNumberOfKeys = keys.maxKeys
         while len(keys) > 0 and previousNumberOfKeys == keys.maxKeys:
-            if pm:
+            if executor:
                 keys = S3Keys(S3Bucket, opts.prefix)
                 keys.chunk(chunkSize)
                 if len(keys):
                     logger.info('New batch delete')
                     logger.info(str(keys))
             if len(keys):
-                pm = PoolManager(numProcs=opts.nbThreads)
-                pm.imap_unordered(
-                    deleteKeys,
-                    keys,
-                    1,
-                    callback=callback)
+                with ProcessPoolExecutor(
+                        max_workers=opts.nbThreads) as executor:
+                    executor.map(deleteKeys, keys, timeout=3 * 60, chunksize=1)
             previousNumberOfKeys = len(keys)
             nbKeysDeleted += previousNumberOfKeys
             logger.info(
