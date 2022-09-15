@@ -361,13 +361,11 @@ def deleteWithPrefix(opts, S3Bucket, keys):
         # Make sure we delete the first batch
         previousNumberOfKeys = keys.maxKeys
         while len(keys) > 0 and previousNumberOfKeys == keys.maxKeys:
-            if executor:
-                keys = S3Keys(S3Bucket, opts.prefix)
-                keys.chunk(chunkSize)
-                if len(keys):
-                    logger.info('New batch delete')
-                    logger.info(str(keys))
+            keys = S3Keys(S3Bucket, opts.prefix)
+            keys.chunk(chunkSize)
             if len(keys):
+                logger.info('New batch delete')
+                logger.info(str(keys))
                 with ProcessPoolExecutor(
                         max_workers=opts.nbThreads) as executor:
                     executor.map(deleteKeys, keys, timeout=3 * 60, chunksize=1)
