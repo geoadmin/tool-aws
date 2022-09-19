@@ -9,7 +9,7 @@ import logging
 import multiprocessing
 import argparse as ap
 from textwrap import dedent
-from poolmanager import PoolManager
+from concurrent.futures import ProcessPoolExecutor
 from botocore.exceptions import ClientError
 from tool_aws.s3.utils import S3Keys, getMaxChunkSize
 from botocore.parsers import ResponseParserError
@@ -155,7 +155,8 @@ def createParser():
         action='store',
         type=bboxType,
         default=None,
-        help='a bounding box in lv95')
+        help='a bounding box in lv95. Only works in combination with  \
+            option --image-format')
     optionGroup.add_argument(
         '-n', '--threads-number',
         dest='nbThreads',
@@ -177,7 +178,7 @@ def createParser():
         action='store',
         type=imageFormatType,
         default=None,
-        help='The image format')
+        help='The image format. Only working with --bbox option.')
     optionGroup.add_argument(
         '-lr', '--lowest-resolution',
         dest='lowRes',
@@ -241,6 +242,14 @@ def parseArguments(parser, argv):
                 '(--bbox option)'
             )
             sys.exit(1)
+    if opts.imageFormat:
+        if not opts.bbox:
+            usage()
+            logger.error(
+                'The image format will not bee taken into account without ' +
+                'setting (--bbox option)'
+            )
+            sys.exit(1)
     if opts.bbox:
         # Image format is required when a bbox is defined
         if not opts.imageFormat:
@@ -249,12 +258,6 @@ def parseArguments(parser, argv):
                 'Image format is required when a bbox is defined (-i option)')
             sys.exit(1)
     return opts, guessSrids(opts)
-
-
-def callback(counter, response):
-    if response:
-        logger.info('number batch delete requests: %s' % counter)
-        logger.info('result: %s' % response)
 
 
 def startJob(keys, force):
@@ -313,6 +316,7 @@ def deleteKeys(keys):
     except Exception as e:
         logger.error(e, exc_info=True)
         raise e
+    logger.info('result: %s' % response)
     return response
 
 
@@ -320,7 +324,7 @@ def deleteWithBBox(opts, S3Bucket, keys):
     # Use max chunkSize as we always delete the whole columns
     nbKeysDeleted = 0
     nbKeysTotal = keys.countTiles()
-    chunkSize = 1000
+    chunkSize = opts.chunkSize or 1000
     logger.info(
         'We are about to trigger %s DELETE requests' % nbKeysTotal)
     keys.chunk(chunkSize)
@@ -329,16 +333,13 @@ def deleteWithBBox(opts, S3Bucket, keys):
         previousNumberOfKeys = keys.maxKeys
         while len(keys) > 0 and previousNumberOfKeys == keys.maxKeys:
             if len(keys):
-                pm = PoolManager(numProcs=opts.nbThreads)
                 logger.info('New batch delete')
                 logger.info(str(keys))
                 # keys are pre-chunked in lists of chunksize
                 # send one list per process
-                pm.imap_unordered(
-                    deleteKeys,
-                    keys,
-                    1,
-                    callback=callback)
+                with ProcessPoolExecutor(
+                        max_workers=opts.nbThreads) as executor:
+                    executor.map(deleteKeys, keys, timeout=3 * 60, chunksize=1)
             previousNumberOfKeys = len(keys)
             keys.chunk(chunkSize)
             nbKeysDeleted += previousNumberOfKeys
@@ -351,7 +352,6 @@ def deleteWithPrefix(opts, S3Bucket, keys):
     nbKeysTotal = keys.countTiles()
     logger.info(
         'We will at most trigger %s DELETE requests' % nbKeysTotal)
-    pm = None
     chunkSize = opts.chunkSize or getMaxChunkSize(
         opts.nbThreads, len(keys))
     keys.chunk(chunkSize)
@@ -360,19 +360,14 @@ def deleteWithPrefix(opts, S3Bucket, keys):
         # Make sure we delete the first batch
         previousNumberOfKeys = keys.maxKeys
         while len(keys) > 0 and previousNumberOfKeys == keys.maxKeys:
-            if pm:
-                keys = S3Keys(S3Bucket, opts.prefix)
-                keys.chunk(chunkSize)
-                if len(keys):
-                    logger.info('New batch delete')
-                    logger.info(str(keys))
+            keys = S3Keys(S3Bucket, opts.prefix)
+            keys.chunk(chunkSize)
             if len(keys):
-                pm = PoolManager(numProcs=opts.nbThreads)
-                pm.imap_unordered(
-                    deleteKeys,
-                    keys,
-                    1,
-                    callback=callback)
+                logger.info('New batch delete')
+                logger.info(str(keys))
+                with ProcessPoolExecutor(
+                        max_workers=opts.nbThreads) as executor:
+                    executor.map(deleteKeys, keys, timeout=3 * 60, chunksize=1)
             previousNumberOfKeys = len(keys)
             nbKeysDeleted += previousNumberOfKeys
             logger.info(
