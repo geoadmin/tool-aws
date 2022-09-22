@@ -1,5 +1,5 @@
 awscli~=1.25.74
-overalls~=3.3.1
+overalls~=0.1.1
 mock~=4.0.3
 nose~=1.3.7
 pycodestyle~=2.9.1
