@@ -72,7 +72,7 @@ Disclaimer:
 
 ## Setup in dev mode
 
-`$ python3 -m env .venv`
+`$ python3 -m venv .venv`
 `$ source .venv/bin/activate`
 `$ pip install -e .`
 `$ pip install -r dev-requirements.txt`

@@ -9,23 +9,15 @@ with open("README.md", "r") as fh:
     long_description = fh.read()
 
 install_requires = [
-    'boto3 == 1.24.73',
-    'botocore == 1.27.73',
-    'certifi == 2022.9.14',
-    'configparser == 5.3.0',
-    'future == 0.18.2',
+    'boto3',
+    'configparser >= 5.3',
     'gatilegrid == 0.2.0',
-    'jmespath == 1.0.1',
-    'pyproj == 3.4.0',
-    'python-dateutil == 2.8.2',
-    's3transfer == 0.6.0',
-    'six == 1.16.0',
-    'urllib3 == 1.26.12',
+    'pyproj >= 3.3',
 ]
 
 
 setup(name=u'tool_aws',
-      version=u'0.2.4',
+      version=u'0.2.6',
       description=u'AWS scripts for geoadmin',
       author=u'Andrea Borghi, Loic Gasser',
       author_email=u'andrea.borghi@swisstopo.ch, loicgasser4@gmail.com',
