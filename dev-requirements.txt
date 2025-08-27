@@ -1,4 +1,4 @@
 mock
-nose
+nose2
 autopep8
 flake8

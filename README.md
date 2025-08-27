@@ -80,7 +80,7 @@ Disclaimer:
 
 To launch the tests:
 
-`$ nosetests tests/`
+`$ nose2 tests`
 
 ### Style
 
