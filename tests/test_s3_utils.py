@@ -33,7 +33,7 @@ class TestS3Utils(unittest.TestCase):
         chunkSize = 20
         dummyKeys = S3Keys(dummyS3Bucket, prefix, chunkSize)
 
-        self.assertIsInstance(dummyKeys, collections.Iterable)
+        self.assertIsInstance(dummyKeys, collections.abc.Iterable)
         self.assertEqual(len(dummyKeys), NB_KEYS)
         self.assertEqual(dummyKeys.prefix, prefix)
         self.assertEqual(dummyKeys.chunkSize, chunkSize)
@@ -57,7 +57,7 @@ class TestS3Utils(unittest.TestCase):
         prefix = 'foo/'
         dummyKeys = S3Keys(dummyS3Bucket, prefix)
 
-        self.assertIsInstance(dummyKeys, collections.Iterable)
+        self.assertIsInstance(dummyKeys, collections.abc.Iterable)
         self.assertEqual(len(dummyKeys), NB_KEYS)
         self.assertEqual(dummyKeys.prefix, prefix)
         self.assertEqual(dummyKeys.chunkSize, 1)
@@ -73,21 +73,21 @@ class TestS3Utils(unittest.TestCase):
         prefix = 'foo/'
         dummyKeys = S3Keys(dummyS3Bucket, prefix)
 
-        self.assertIsInstance(dummyKeys, collections.Iterable)
+        self.assertIsInstance(dummyKeys, collections.abc.Iterable)
         self.assertEqual(len(dummyKeys), NB_KEYS)
         self.assertEqual(dummyKeys.prefix, prefix)
         self.assertEqual(dummyKeys.chunkSize, 1)
 
         chunkSize = 20
         dummyKeys.chunk(chunkSize)
-        self.assertIsInstance(dummyKeys, collections.Iterable)
+        self.assertIsInstance(dummyKeys, collections.abc.Iterable)
         self.assertEqual(len(dummyKeys), NB_KEYS)
         self.assertEqual(dummyKeys.prefix, prefix)
         self.assertEqual(dummyKeys.chunkSize, chunkSize)
 
         chunkSize = 1
         dummyKeys.chunk(chunkSize)
-        self.assertIsInstance(dummyKeys, collections.Iterable)
+        self.assertIsInstance(dummyKeys, collections.abc.Iterable)
         self.assertEqual(len(dummyKeys), NB_KEYS)
         self.assertEqual(dummyKeys.prefix, prefix)
         self.assertEqual(dummyKeys.chunkSize, chunkSize)
