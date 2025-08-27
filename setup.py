@@ -11,7 +11,7 @@ with open("README.md", "r") as fh:
 install_requires = [
     'boto3',
     'configparser >= 5.3',
-    'gatilegrid == 0.2.0',
+    'gatilegrid >= 0.2.0',
     'pyproj >= 3.3',
 ]
 
