@@ -1,7 +1,8 @@
 tool-aws
 ========
 
-![Build Status](https://codebuild.eu-central-1.amazonaws.com/badges?uuid=eyJlbmNyeXB0ZWREYXRhIjoiMkdMVnVoVDVnUW1WWTZLYjNUOGdVV2FSZ1g0VHNPdEtnRk9YcWpuQWE0L29XRlEyQlVhUmlqUVBncmVST0NyTHhwZDVRdzNQVnFmTHNtTC81dmJBOG4wPSIsIml2UGFyYW1ldGVyU3BlYyI6InAxWTJCN2lzUzFUcjVyRFQiLCJtYXRlcmlhbFNldFNlcmlhbCI6MX0%3D&branch=master)
+> [!WARNING]
+> This project is no longer under active development
 
 ### Macro CMDs for managing AWS resources
 
